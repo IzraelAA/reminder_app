@@ -77,6 +77,11 @@ class ReminderCubit extends Cubit<ReminderState> {
         // Schedule notification
         try {
           await _notificationService.scheduleNotification(created);
+          // Also show immediate notification to test if notifications work
+          await _notificationService.showImmediateNotification(
+            title: 'Reminder Created',
+            body: 'Your reminder "${created.title}" has been scheduled',
+          );
         } catch (e) {
           // Log but don't fail the operation
           print('Failed to schedule notification: $e');
