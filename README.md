@@ -2,6 +2,16 @@
 
 A modern Flutter reminder application with time-based and location-based reminders.
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/Simulator Screenshot - iPhone 17 Pro Max - 2026-01-17 at 12.30.55.png" width="200" alt="Home Screen"/>
+  <img src="assets/Simulator Screenshot - iPhone 17 Pro Max - 2026-01-17 at 12.31.14.png" width="200" alt="Add Reminder"/>
+  <img src="assets/Simulator Screenshot - iPhone 17 Pro Max - 2026-01-17 at 12.31.24.png" width="200" alt="Priority Selection"/>
+  <img src="assets/Simulator Screenshot - iPhone 17 Pro Max - 2026-01-17 at 12.31.33.png" width="200" alt="Repeat Options"/>
+  <img src="assets/Simulator Screenshot - iPhone 17 Pro Max - 2026-01-17 at 12.31.41.png" width="200" alt="Location Picker"/>
+</p>
+
 ## Features
 
 - ✅ Create, edit, and delete reminders
@@ -102,8 +112,8 @@ Run specific test files:
 # Data layer tests
 flutter test test/features/reminder/data/
 
-# Cubit tests
-flutter test test/features/reminder/presentation/cubit/
+# Bloc tests
+flutter test test/features/reminder/presentation/bloc/
 ```
 
 ### Test Coverage
@@ -112,8 +122,8 @@ flutter test test/features/reminder/presentation/cubit/
 |-------|-----------|-------|
 | Data | `ReminderLocalDataSource` | 12 tests |
 | Data | `ReminderRepositoryImpl` | 24 tests |
-| Presentation | `AddReminderCubit` | 14 tests |
-| Presentation | `ReminderCubit` | 21 tests |
+| Presentation | `AddReminderBloc` | 14 tests |
+| Presentation | `ReminderBloc` | 21 tests |
 
 ### Testing Libraries
 - `bloc_test` - Cubit/BLoC state testing
