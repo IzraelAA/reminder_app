@@ -1,3 +1,3 @@
 // Presentation Layer Exports
-export 'cubit/reminder_cubit.dart';
-export 'cubit/add_reminder_cubit.dart';
+export 'bloc/reminder/reminder_bloc.dart';
+export 'bloc/add_reminder/add_reminder_bloc.dart';

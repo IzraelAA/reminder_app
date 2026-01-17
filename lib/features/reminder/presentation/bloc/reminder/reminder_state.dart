@@ -1,9 +1,9 @@
-part of 'reminder_cubit.dart';
+part of 'reminder_bloc.dart';
 
 /// Enum representing the status of reminder operations
 enum ReminderStatus { initial, loading, success, failure }
 
-/// State class for ReminderCubit
+/// State class for ReminderBloc
 /// Using single state class with status enum for cleaner state management
 final class ReminderState extends Equatable {
   final ReminderStatus status;

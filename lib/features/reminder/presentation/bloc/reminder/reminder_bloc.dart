@@ -6,20 +6,32 @@ import 'package:reminder_app/features/reminder/domain/entities/reminder_entity.d
 import 'package:reminder_app/features/reminder/domain/repositories/reminder_repository.dart';
 import 'package:reminder_app/features/reminder/services/notification_service.dart';
 
+part 'reminder_event.dart';
 part 'reminder_state.dart';
 
-/// ReminderCubit handles all reminder-related business logic
+/// ReminderBloc handles all reminder-related business logic
 /// Following Single Responsibility Principle - only orchestrates reminder operations
 @injectable
-class ReminderCubit extends Cubit<ReminderState> {
+class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   final ReminderRepository _repository;
   final NotificationService _notificationService;
   final Uuid _uuid = const Uuid();
 
-  ReminderCubit(this._repository, this._notificationService)
-    : super(ReminderState.initial());
+  ReminderBloc(this._repository, this._notificationService)
+    : super(ReminderState.initial()) {
+    on<ReminderLoadRequested>(_onLoadRequested);
+    on<ReminderCreateRequested>(_onCreateRequested);
+    on<ReminderUpdateRequested>(_onUpdateRequested);
+    on<ReminderDeleteRequested>(_onDeleteRequested);
+    on<ReminderToggleCompletionRequested>(_onToggleCompletionRequested);
+    on<ReminderLoadUpcomingRequested>(_onLoadUpcomingRequested);
+    on<ReminderLoadOverdueRequested>(_onLoadOverdueRequested);
+  }
 
-  Future<void> loadReminders() async {
+  Future<void> _onLoadRequested(
+    ReminderLoadRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     emit(state.copyWith(status: ReminderStatus.loading));
 
     final result = await _repository.getAllReminders();
@@ -37,31 +49,24 @@ class ReminderCubit extends Cubit<ReminderState> {
     );
   }
 
-  Future<void> createReminder({
-    required String title,
-    String? description,
-    required DateTime dateTime,
-    ReminderPriority priority = ReminderPriority.medium,
-    RepeatType repeatType = RepeatType.none,
-    double? latitude,
-    double? longitude,
-    double? radiusInMeters,
-    String? locationName,
-  }) async {
+  Future<void> _onCreateRequested(
+    ReminderCreateRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     emit(state.copyWith(status: ReminderStatus.loading));
 
     final reminder = ReminderEntity(
       id: _uuid.v4(),
-      title: title,
-      description: description,
-      dateTime: dateTime,
-      priority: priority,
-      repeatType: repeatType,
+      title: event.title,
+      description: event.description,
+      dateTime: event.dateTime,
+      priority: event.priority,
+      repeatType: event.repeatType,
       createdAt: DateTime.now(),
-      latitude: latitude,
-      longitude: longitude,
-      radiusInMeters: radiusInMeters,
-      locationName: locationName,
+      latitude: event.latitude,
+      longitude: event.longitude,
+      radiusInMeters: event.radiusInMeters,
+      locationName: event.locationName,
     );
 
     final result = await _repository.createReminder(reminder);
@@ -77,14 +82,8 @@ class ReminderCubit extends Cubit<ReminderState> {
         // Schedule notification
         try {
           await _notificationService.scheduleNotification(created);
-          // Also show immediate notification to test if notifications work
-          await _notificationService.showImmediateNotification(
-            title: 'Reminder Created',
-            body: 'Your reminder "${created.title}" has been scheduled',
-          );
         } catch (e) {
-          // Log but don't fail the operation
-          print('Failed to schedule notification: $e');
+          // Log but don't fail the operation - notification scheduling is best effort
         }
 
         // Refresh the list
@@ -108,10 +107,13 @@ class ReminderCubit extends Cubit<ReminderState> {
     );
   }
 
-  Future<void> updateReminder(ReminderEntity reminder) async {
+  Future<void> _onUpdateRequested(
+    ReminderUpdateRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     emit(state.copyWith(status: ReminderStatus.loading));
 
-    final result = await _repository.updateReminder(reminder);
+    final result = await _repository.updateReminder(event.reminder);
 
     await result.fold(
       (failure) async => emit(
@@ -148,13 +150,16 @@ class ReminderCubit extends Cubit<ReminderState> {
     );
   }
 
-  Future<void> deleteReminder(String id) async {
+  Future<void> _onDeleteRequested(
+    ReminderDeleteRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     emit(state.copyWith(status: ReminderStatus.loading));
 
     // Cancel notification first
-    await _notificationService.cancelNotification(id);
+    await _notificationService.cancelNotification(event.id);
 
-    final result = await _repository.deleteReminder(id);
+    final result = await _repository.deleteReminder(event.id);
 
     await result.fold(
       (failure) async => emit(
@@ -177,7 +182,7 @@ class ReminderCubit extends Cubit<ReminderState> {
             state.copyWith(
               status: ReminderStatus.success,
               reminders: reminders,
-              lastDeletedId: id,
+              lastDeletedId: event.id,
             ),
           ),
         );
@@ -185,10 +190,13 @@ class ReminderCubit extends Cubit<ReminderState> {
     );
   }
 
-  Future<void> toggleReminderCompletion(String id) async {
+  Future<void> _onToggleCompletionRequested(
+    ReminderToggleCompletionRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     emit(state.copyWith(status: ReminderStatus.loading));
 
-    final result = await _repository.toggleReminderCompletion(id);
+    final result = await _repository.toggleReminderCompletion(event.id);
 
     await result.fold(
       (failure) async => emit(
@@ -226,9 +234,12 @@ class ReminderCubit extends Cubit<ReminderState> {
     );
   }
 
-  Future<void> loadUpcomingReminders({int withinHours = 24}) async {
+  Future<void> _onLoadUpcomingRequested(
+    ReminderLoadUpcomingRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     final result = await _repository.getUpcomingReminders(
-      withinHours: withinHours,
+      withinHours: event.withinHours,
     );
 
     result.fold(
@@ -247,7 +258,10 @@ class ReminderCubit extends Cubit<ReminderState> {
     );
   }
 
-  Future<void> loadOverdueReminders() async {
+  Future<void> _onLoadOverdueRequested(
+    ReminderLoadOverdueRequested event,
+    Emitter<ReminderState> emit,
+  ) async {
     final result = await _repository.getOverdueReminders();
 
     result.fold(

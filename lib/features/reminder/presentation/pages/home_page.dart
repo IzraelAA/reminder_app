@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:reminder_app/core/route/app_router.gr.dart';
 import 'package:reminder_app/features/reminder/domain/entities/reminder_entity.dart';
-import 'package:reminder_app/features/reminder/presentation/cubit/reminder_cubit.dart';
+import 'package:reminder_app/features/reminder/presentation/bloc/reminder/reminder_bloc.dart';
 import 'package:reminder_app/features/reminder/presentation/widgets/animated_reminder_list.dart';
 import 'package:reminder_app/features/reminder/presentation/widgets/empty_state_widget.dart';
 import 'package:reminder_app/utils/app_color.dart';
@@ -59,7 +59,7 @@ class _HomePageState extends State<HomePage>
           children: [
             _buildHeader(),
             Expanded(
-              child: BlocBuilder<ReminderCubit, ReminderState>(
+              child: BlocBuilder<ReminderBloc, ReminderState>(
                 builder: (context, state) {
                   if (state.isLoading && state.reminders.isEmpty) {
                     return _buildLoadingState();
@@ -72,16 +72,20 @@ class _HomePageState extends State<HomePage>
                   return AnimatedReminderList(
                     reminders: state.reminders,
                     onToggleComplete: (reminder) {
-                      context.read<ReminderCubit>().toggleReminderCompletion(
-                        reminder.id,
+                      context.read<ReminderBloc>().add(
+                        ReminderToggleCompletionRequested(reminder.id),
                       );
                     },
                     onDelete: (reminder) {
-                      context.read<ReminderCubit>().deleteReminder(reminder.id);
+                      context.read<ReminderBloc>().add(
+                        ReminderDeleteRequested(reminder.id),
+                      );
                     },
                     onEdit: (reminder) => _navigateToEditReminder(reminder),
                     onRefresh: () async {
-                      context.read<ReminderCubit>().loadReminders();
+                      context.read<ReminderBloc>().add(
+                        const ReminderLoadRequested(),
+                      );
                     },
                   );
                 },
@@ -134,7 +138,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildStatsChip() {
-    return BlocBuilder<ReminderCubit, ReminderState>(
+    return BlocBuilder<ReminderBloc, ReminderState>(
       builder: (context, state) {
         final activeCount = state.reminders.where((r) => !r.isCompleted).length;
         final overdueCount = state.reminders.where((r) => r.isOverdue).length;

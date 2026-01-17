@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:reminder_app/app/app_theme.dart';
 import 'package:reminder_app/core/di/injection.dart';
 import 'package:reminder_app/core/route/app_router.dart';
-import 'package:reminder_app/features/reminder/presentation/cubit/reminder_cubit.dart';
+import 'package:reminder_app/features/reminder/presentation/bloc/reminder/reminder_bloc.dart';
 
 class App extends StatelessWidget {
   App({super.key});
@@ -14,8 +14,9 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<ReminderCubit>(
-          create: (context) => getIt<ReminderCubit>()..loadReminders(),
+        BlocProvider<ReminderBloc>(
+          create: (context) =>
+              getIt<ReminderBloc>()..add(const ReminderLoadRequested()),
         ),
       ],
       child: MaterialApp.router(

@@ -18,8 +18,8 @@ import '../../features/reminder/data/repositories/reminder_repository_impl.dart'
     as _i819;
 import '../../features/reminder/domain/repositories/reminder_repository.dart'
     as _i731;
-import '../../features/reminder/presentation/cubit/reminder_cubit.dart'
-    as _i319;
+import '../../features/reminder/presentation/bloc/reminder/reminder_bloc.dart'
+    as _i104;
 import '../../features/reminder/services/location_permission_service.dart'
     as _i489;
 import '../../features/reminder/services/location_reminder_service.dart'
@@ -84,7 +84,7 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i908.GetSampleByIdUseCase(gh<_i672.SampleRepository>()));
     gh.factory<_i1036.SampleDetailCubit>(() => _i1036.SampleDetailCubit(
         getSampleByIdUseCase: gh<_i908.GetSampleByIdUseCase>()));
-    gh.factory<_i319.ReminderCubit>(() => _i319.ReminderCubit(
+    gh.factory<_i104.ReminderBloc>(() => _i104.ReminderBloc(
           gh<_i731.ReminderRepository>(),
           gh<_i133.NotificationService>(),
         ));

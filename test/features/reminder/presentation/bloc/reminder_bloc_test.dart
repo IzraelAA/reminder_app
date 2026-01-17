@@ -5,7 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:reminder_app/core/network/failure.dart';
 import 'package:reminder_app/features/reminder/domain/entities/reminder_entity.dart';
 import 'package:reminder_app/features/reminder/domain/repositories/reminder_repository.dart';
-import 'package:reminder_app/features/reminder/presentation/cubit/reminder_cubit.dart';
+import 'package:reminder_app/features/reminder/presentation/bloc/reminder/reminder_bloc.dart';
 import 'package:reminder_app/features/reminder/services/notification_service.dart';
 
 /// Mock for ReminderRepository
@@ -20,7 +20,7 @@ class FakeReminderEntity extends Fake implements ReminderEntity {}
 void main() {
   late MockReminderRepository mockRepository;
   late MockNotificationService mockNotificationService;
-  late ReminderCubit cubit;
+  late ReminderBloc bloc;
 
   /// Helper to create test reminder
   ReminderEntity createTestReminder({
@@ -47,22 +47,22 @@ void main() {
   setUp(() {
     mockRepository = MockReminderRepository();
     mockNotificationService = MockNotificationService();
-    cubit = ReminderCubit(mockRepository, mockNotificationService);
+    bloc = ReminderBloc(mockRepository, mockNotificationService);
   });
 
   tearDown(() {
-    cubit.close();
+    bloc.close();
   });
 
-  group('ReminderCubit', () {
+  group('ReminderBloc', () {
     test('initial state should be ReminderState.initial()', () {
-      expect(cubit.state, ReminderState.initial());
-      expect(cubit.state.status, ReminderStatus.initial);
-      expect(cubit.state.reminders, isEmpty);
+      expect(bloc.state, ReminderState.initial());
+      expect(bloc.state.status, ReminderStatus.initial);
+      expect(bloc.state.reminders, isEmpty);
     });
 
-    group('loadReminders', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderLoadRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, success] with reminders when repository returns Right',
         setUp: () {
           final reminders = [
@@ -73,8 +73,8 @@ void main() {
             () => mockRepository.getAllReminders(),
           ).thenAnswer((_) async => Right(reminders));
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.loadReminders(),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderLoadRequested()),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -90,7 +90,7 @@ void main() {
         },
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, failure] when repository returns Left',
         setUp: () {
           when(() => mockRepository.getAllReminders()).thenAnswer(
@@ -98,8 +98,8 @@ void main() {
                 const Left(CacheFailure(message: 'Failed to load reminders')),
           );
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.loadReminders(),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderLoadRequested()),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -117,8 +117,8 @@ void main() {
       );
     });
 
-    group('createReminder', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderCreateRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, success] when reminder is created successfully',
         setUp: () {
           when(
@@ -131,10 +131,12 @@ void main() {
             () => mockNotificationService.scheduleNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.createReminder(
-          title: 'New Reminder',
-          dateTime: DateTime.now().add(const Duration(hours: 1)),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(
+          ReminderCreateRequested(
+            title: 'New Reminder',
+            dateTime: DateTime.now().add(const Duration(hours: 1)),
+          ),
         ),
         expect: () => [
           isA<ReminderState>().having(
@@ -154,7 +156,7 @@ void main() {
         },
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, failure] when create fails',
         setUp: () {
           when(() => mockRepository.createReminder(any())).thenAnswer(
@@ -162,10 +164,12 @@ void main() {
                 const Left(CacheFailure(message: 'Failed to create reminder')),
           );
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.createReminder(
-          title: 'New Reminder',
-          dateTime: DateTime.now(),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(
+          ReminderCreateRequested(
+            title: 'New Reminder',
+            dateTime: DateTime.now(),
+          ),
         ),
         expect: () => [
           isA<ReminderState>().having(
@@ -184,8 +188,8 @@ void main() {
       );
     });
 
-    group('updateReminder', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderUpdateRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, success] when reminder is updated successfully',
         setUp: () {
           final reminder = createTestReminder(isCompleted: false);
@@ -202,8 +206,8 @@ void main() {
             () => mockNotificationService.scheduleNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.updateReminder(createTestReminder()),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(ReminderUpdateRequested(createTestReminder())),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -225,7 +229,7 @@ void main() {
         },
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'does not reschedule notification when reminder is completed',
         setUp: () {
           final completedReminder = createTestReminder(isCompleted: true);
@@ -239,9 +243,10 @@ void main() {
             () => mockNotificationService.cancelNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) =>
-            cubit.updateReminder(createTestReminder(isCompleted: true)),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(
+          ReminderUpdateRequested(createTestReminder(isCompleted: true)),
+        ),
         verify: (_) {
           verify(
             () => mockNotificationService.cancelNotification(any()),
@@ -253,8 +258,8 @@ void main() {
       );
     });
 
-    group('deleteReminder', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderDeleteRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, success] when reminder is deleted successfully',
         setUp: () {
           when(
@@ -267,8 +272,8 @@ void main() {
             () => mockNotificationService.cancelNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.deleteReminder('test-id'),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderDeleteRequested('test-id')),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -287,7 +292,7 @@ void main() {
         },
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, failure] when delete fails',
         setUp: () {
           when(() => mockRepository.deleteReminder(any())).thenAnswer(
@@ -298,8 +303,8 @@ void main() {
             () => mockNotificationService.cancelNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.deleteReminder('test-id'),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderDeleteRequested('test-id')),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -315,8 +320,8 @@ void main() {
       );
     });
 
-    group('toggleReminderCompletion', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderToggleCompletionRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, success] and cancels notification when toggled to complete',
         setUp: () {
           final completedReminder = createTestReminder(isCompleted: true);
@@ -330,8 +335,9 @@ void main() {
             () => mockNotificationService.cancelNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.toggleReminderCompletion('test-id'),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) =>
+            bloc.add(const ReminderToggleCompletionRequested('test-id')),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -354,7 +360,7 @@ void main() {
         },
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'emits [loading, success] and schedules notification when toggled to incomplete',
         setUp: () {
           final incompleteReminder = createTestReminder(isCompleted: false);
@@ -368,8 +374,9 @@ void main() {
             () => mockNotificationService.scheduleNotification(any()),
           ).thenAnswer((_) async {});
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.toggleReminderCompletion('test-id'),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) =>
+            bloc.add(const ReminderToggleCompletionRequested('test-id')),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -390,8 +397,8 @@ void main() {
       );
     });
 
-    group('loadUpcomingReminders', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderLoadUpcomingRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [success] with upcoming reminders',
         setUp: () {
           final reminders = [createTestReminder()];
@@ -401,8 +408,9 @@ void main() {
             ),
           ).thenAnswer((_) async => Right(reminders));
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.loadUpcomingReminders(withinHours: 24),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) =>
+            bloc.add(const ReminderLoadUpcomingRequested(withinHours: 24)),
         expect: () => [
           isA<ReminderState>()
               .having((s) => s.status, 'status', ReminderStatus.success)
@@ -414,7 +422,7 @@ void main() {
         ],
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'emits [failure] when loading fails',
         setUp: () {
           when(
@@ -426,8 +434,8 @@ void main() {
                 const Left(CacheFailure(message: 'Failed to load upcoming')),
           );
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.loadUpcomingReminders(),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderLoadUpcomingRequested()),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,
@@ -438,8 +446,8 @@ void main() {
       );
     });
 
-    group('loadOverdueReminders', () {
-      blocTest<ReminderCubit, ReminderState>(
+    group('ReminderLoadOverdueRequested', () {
+      blocTest<ReminderBloc, ReminderState>(
         'emits [success] with overdue reminders',
         setUp: () {
           final reminders = [createTestReminder()];
@@ -447,8 +455,8 @@ void main() {
             () => mockRepository.getOverdueReminders(),
           ).thenAnswer((_) async => Right(reminders));
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.loadOverdueReminders(),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderLoadOverdueRequested()),
         expect: () => [
           isA<ReminderState>()
               .having((s) => s.status, 'status', ReminderStatus.success)
@@ -460,7 +468,7 @@ void main() {
         ],
       );
 
-      blocTest<ReminderCubit, ReminderState>(
+      blocTest<ReminderBloc, ReminderState>(
         'emits [failure] when loading fails',
         setUp: () {
           when(() => mockRepository.getOverdueReminders()).thenAnswer(
@@ -468,8 +476,8 @@ void main() {
                 const Left(CacheFailure(message: 'Failed to load overdue')),
           );
         },
-        build: () => ReminderCubit(mockRepository, mockNotificationService),
-        act: (cubit) => cubit.loadOverdueReminders(),
+        build: () => ReminderBloc(mockRepository, mockNotificationService),
+        act: (bloc) => bloc.add(const ReminderLoadOverdueRequested()),
         expect: () => [
           isA<ReminderState>().having(
             (s) => s.status,

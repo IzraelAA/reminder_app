@@ -2,8 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:reminder_app/features/reminder/domain/entities/reminder_entity.dart';
-import 'package:reminder_app/features/reminder/presentation/cubit/add_reminder_cubit.dart';
-import 'package:reminder_app/features/reminder/presentation/cubit/reminder_cubit.dart';
+import 'package:reminder_app/features/reminder/presentation/bloc/add_reminder/add_reminder_bloc.dart';
+import 'package:reminder_app/features/reminder/presentation/bloc/reminder/reminder_bloc.dart';
 import 'package:reminder_app/features/reminder/presentation/widgets/location_picker_widget.dart';
 import 'package:reminder_app/features/reminder/presentation/widgets/priority_selector_widget.dart';
 import 'package:reminder_app/features/reminder/presentation/widgets/reminder_description_field.dart';
@@ -66,7 +66,7 @@ class _AddReminderPageState extends State<AddReminderPage>
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AddReminderCubit(reminder: widget.reminder),
+      create: (_) => AddReminderBloc(reminder: widget.reminder),
       child: Scaffold(
         backgroundColor: AppColor.background,
         body: SafeArea(
@@ -80,7 +80,7 @@ class _AddReminderPageState extends State<AddReminderPage>
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: BlocBuilder<AddReminderCubit, AddReminderState>(
+                      child: BlocBuilder<AddReminderBloc, AddReminderState>(
                         builder: (context, state) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,18 +101,18 @@ class _AddReminderPageState extends State<AddReminderPage>
                               PrioritySelectorWidget(
                                 selectedPriority: state.selectedPriority,
                                 onPriorityChanged: (priority) {
-                                  context
-                                      .read<AddReminderCubit>()
-                                      .updatePriority(priority);
+                                  context.read<AddReminderBloc>().add(
+                                    AddReminderPriorityChanged(priority),
+                                  );
                                 },
                               ),
                               const SizedBox(height: 24),
                               RepeatSelectorWidget(
                                 selectedRepeatType: state.selectedRepeatType,
                                 onRepeatTypeChanged: (repeatType) {
-                                  context
-                                      .read<AddReminderCubit>()
-                                      .updateRepeatType(repeatType);
+                                  context.read<AddReminderBloc>().add(
+                                    AddReminderRepeatTypeChanged(repeatType),
+                                  );
                                 },
                               ),
                               const SizedBox(height: 24),
@@ -123,22 +123,22 @@ class _AddReminderPageState extends State<AddReminderPage>
                                 radiusInMeters: state.radiusInMeters,
                                 locationName: state.locationName,
                                 onEnabledChanged: (enabled) {
-                                  context
-                                      .read<AddReminderCubit>()
-                                      .toggleLocation(enabled);
+                                  context.read<AddReminderBloc>().add(
+                                    AddReminderLocationToggled(enabled),
+                                  );
                                 },
                                 onLatitudeChanged: (lat) => context
-                                    .read<AddReminderCubit>()
-                                    .updateLatitude(lat),
+                                    .read<AddReminderBloc>()
+                                    .add(AddReminderLatitudeChanged(lat)),
                                 onLongitudeChanged: (lng) => context
-                                    .read<AddReminderCubit>()
-                                    .updateLongitude(lng),
+                                    .read<AddReminderBloc>()
+                                    .add(AddReminderLongitudeChanged(lng)),
                                 onRadiusChanged: (radius) => context
-                                    .read<AddReminderCubit>()
-                                    .updateRadius(radius),
+                                    .read<AddReminderBloc>()
+                                    .add(AddReminderRadiusChanged(radius)),
                                 onLocationNameChanged: (name) => context
-                                    .read<AddReminderCubit>()
-                                    .updateLocationName(name),
+                                    .read<AddReminderBloc>()
+                                    .add(AddReminderLocationNameChanged(name)),
                               ),
                               const SizedBox(height: 32),
                             ],
@@ -165,10 +165,10 @@ class _AddReminderPageState extends State<AddReminderPage>
   }
 
   Future<void> _showTimePicker(BuildContext context) async {
-    final cubit = context.read<AddReminderCubit>();
+    final bloc = context.read<AddReminderBloc>();
     final picked = await showTimePicker(
       context: context,
-      initialTime: cubit.state.selectedTime,
+      initialTime: bloc.state.selectedTime,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -207,15 +207,15 @@ class _AddReminderPageState extends State<AddReminderPage>
       },
     );
     if (picked != null) {
-      cubit.updateTime(picked);
+      bloc.add(AddReminderTimeChanged(picked));
     }
   }
 
   Future<void> _showDatePicker(BuildContext context) async {
-    final cubit = context.read<AddReminderCubit>();
+    final bloc = context.read<AddReminderBloc>();
     final picked = await showDatePicker(
       context: context,
-      initialDate: cubit.state.selectedDate,
+      initialDate: bloc.state.selectedDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
       builder: (context, child) {
@@ -259,7 +259,7 @@ class _AddReminderPageState extends State<AddReminderPage>
       },
     );
     if (picked != null) {
-      cubit.updateDate(picked);
+      bloc.add(AddReminderDateChanged(picked));
     }
   }
 
@@ -269,9 +269,9 @@ class _AddReminderPageState extends State<AddReminderPage>
       return;
     }
 
-    final cubit = context.read<AddReminderCubit>();
-    final state = cubit.state;
-    final dateTime = cubit.combinedDateTime;
+    final bloc = context.read<AddReminderBloc>();
+    final state = bloc.state;
+    final dateTime = state.combinedDateTime;
 
     if (dateTime.isBefore(DateTime.now())) {
       _showErrorSnackBar('Please select a future date and time');
@@ -279,8 +279,26 @@ class _AddReminderPageState extends State<AddReminderPage>
     }
 
     if (isEditing) {
-      context.read<ReminderCubit>().updateReminder(
-        widget.reminder!.copyWith(
+      context.read<ReminderBloc>().add(
+        ReminderUpdateRequested(
+          widget.reminder!.copyWith(
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+            dateTime: dateTime,
+            priority: state.selectedPriority,
+            repeatType: state.selectedRepeatType,
+            latitude: state.hasLocation ? state.latitude : null,
+            longitude: state.hasLocation ? state.longitude : null,
+            radiusInMeters: state.hasLocation ? state.radiusInMeters : null,
+            locationName: state.hasLocation ? state.locationName : null,
+          ),
+        ),
+      );
+    } else {
+      context.read<ReminderBloc>().add(
+        ReminderCreateRequested(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim().isEmpty
               ? null
@@ -293,20 +311,6 @@ class _AddReminderPageState extends State<AddReminderPage>
           radiusInMeters: state.hasLocation ? state.radiusInMeters : null,
           locationName: state.hasLocation ? state.locationName : null,
         ),
-      );
-    } else {
-      context.read<ReminderCubit>().createReminder(
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
-        dateTime: dateTime,
-        priority: state.selectedPriority,
-        repeatType: state.selectedRepeatType,
-        latitude: state.hasLocation ? state.latitude : null,
-        longitude: state.hasLocation ? state.longitude : null,
-        radiusInMeters: state.hasLocation ? state.radiusInMeters : null,
-        locationName: state.hasLocation ? state.locationName : null,
       );
     }
 

@@ -235,43 +235,6 @@ class NotificationService {
     await _notificationsPlugin.cancelAll();
   }
 
-  /// Show an immediate notification (for testing)
-  Future<void> showImmediateNotification({
-    required String title,
-    String? body,
-  }) async {
-    if (!_isInitialized) await initialize();
-
-    const androidDetails = AndroidNotificationDetails(
-      'reminder_channel',
-      'Reminders',
-      channelDescription: 'Notifications for reminders',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'Reminder',
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body ?? 'Test notification',
-      notificationDetails,
-    );
-
-    debugPrint('NotificationService: Immediate notification shown');
-  }
-
   /// Get pending notifications count
   Future<int> getPendingNotificationsCount() async {
     if (!_isInitialized) await initialize();

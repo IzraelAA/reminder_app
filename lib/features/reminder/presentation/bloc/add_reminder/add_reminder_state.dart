@@ -1,6 +1,7 @@
-part of 'add_reminder_cubit.dart';
+part of 'add_reminder_bloc.dart';
 
-class AddReminderState extends Equatable {
+/// State class for AddReminderBloc
+final class AddReminderState extends Equatable {
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
   final ReminderPriority selectedPriority;
@@ -40,6 +41,15 @@ class AddReminderState extends Equatable {
       locationName: reminder?.locationName,
     );
   }
+
+  /// Get the combined DateTime from selected date and time
+  DateTime get combinedDateTime => DateTime(
+    selectedDate.year,
+    selectedDate.month,
+    selectedDate.day,
+    selectedTime.hour,
+    selectedTime.minute,
+  );
 
   AddReminderState copyWith({
     DateTime? selectedDate,
